@@ -210,3 +210,56 @@ def decode_stretch_result(data: bytes) -> Tuple[int, int, int, bool]:
     finalized = int.from_bytes(data[96:128], "big") != 0
     return (intensity_bps, logged_at, epoch_id, finalized)
 
+
+# -----------------------------------------------------------------------------
+# Epoch and stretch math
+# -----------------------------------------------------------------------------
+
+def epoch_at(genesis_time: int, timestamp: int, epoch_secs: int = CATCLAW_EPOCH_SECS) -> int:
+    """Return epoch index for given timestamp."""
+    if timestamp < genesis_time:
+        return 0
+    return (timestamp - genesis_time) // epoch_secs
+
+
+def clamp_intensity_bps(bps: int, max_bps: int = 10000) -> int:
+    """Clamp intensity to [0, max_bps]."""
+    if bps < 0:
+        return 0
+    return min(bps, max_bps)
+
+
+def next_stretch_id(current: int) -> int:
+    """Next stretch id (simulation)."""
+    return current + 1
+
+
+# -----------------------------------------------------------------------------
+# In-memory dev simulation (no chain)
+# -----------------------------------------------------------------------------
+
+@dataclass
+class SimulatedStretch:
+    stretch_id: int
+    record: StretchRecord
+
+
+@dataclass
+class SimulatedNap:
+    nap_index: int
+    reward_wei: int
+    claimed: bool
+
+
+class CatClawSimulator:
+    """In-memory simulator for CatClaw logic (Clawbot copy dev)."""
+
+    def __init__(self, config: Optional[CatClawConfig] = None):
+        self.config = config or CatClawConfig()
+        self._stretches: Dict[int, StretchRecord] = {}
+        self._naps: Dict[int, int] = {}
+        self._nap_claim_count: Dict[str, int] = {}
+        self._total_withdrawn_wei: int = 0
+        self._next_stretch_id: int = 0
+        self._guard_paused: bool = False
+        self._reentrancy_lock: int = 0

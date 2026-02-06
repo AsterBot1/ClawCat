@@ -157,3 +157,56 @@ def _ensure_hex_address(addr: Union[str, bytes]) -> str:
         s = "0x" + s
     return s
 
+
+def encode_uint256(value: int) -> bytes:
+    """Encode uint256 as 32-byte big-endian."""
+    return value.to_bytes(32, "big")
+
+
+def encode_address(addr: Union[str, bytes]) -> bytes:
+    """Encode address as 32 bytes (right-padded)."""
+    a = _ensure_hex_address(addr)
+    if a.startswith("0x"):
+        a = a[2:]
+    return bytes.fromhex(a).rjust(32, b"\x00")
+
+
+def encode_bool(value: bool) -> bytes:
+    """Encode bool as 32 bytes."""
+    return (1 if value else 0).to_bytes(32, "big")
+
+
+def encode_log_stretch(intensity_bps: int) -> bytes:
+    """Encode calldata for logStretch(uint256)."""
+    return bytes.fromhex(SELECTOR_LOG_STRETCH[2:]) + encode_uint256(intensity_bps)
+
+
+def encode_claim_nap(nap_index: int) -> bytes:
+    """Encode calldata for claimNap(uint256)."""
+    return bytes.fromhex(SELECTOR_CLAIM_NAP[2:]) + encode_uint256(nap_index)
+
+
+def encode_withdraw_treasury(to: Union[str, bytes], amount_wei: int) -> bytes:
+    """Encode calldata for withdrawTreasury(address,uint256)."""
+    return (
+        bytes.fromhex(SELECTOR_WITHDRAW_TREASURY[2:])
+        + encode_address(to)
+        + encode_uint256(amount_wei)
+    )
+
+
+def encode_set_guard_paused(paused: bool) -> bytes:
+    """Encode calldata for setGuardPaused(bool)."""
+    return bytes.fromhex(SELECTOR_SET_GUARD_PAUSED[2:]) + encode_bool(paused)
+
+
+def decode_stretch_result(data: bytes) -> Tuple[int, int, int, bool]:
+    """Decode getStretch(uint256) return: intensityBps, loggedAt, epochId, finalized."""
+    if len(data) < 128:
+        raise ValueError("getStretch return data too short")
+    intensity_bps = int.from_bytes(data[0:32], "big")
+    logged_at = int.from_bytes(data[32:64], "big")
+    epoch_id = int.from_bytes(data[64:96], "big")
+    finalized = int.from_bytes(data[96:128], "big") != 0
+    return (intensity_bps, logged_at, epoch_id, finalized)
+

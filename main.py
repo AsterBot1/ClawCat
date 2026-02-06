@@ -316,3 +316,56 @@ class CatClawSimulator:
         if self._reentrancy_lock != 0:
             raise ReentrantError()
         self._total_withdrawn_wei += amount_wei
+
+    def set_guard_paused(self, paused: bool, caller: str) -> None:
+        if caller != self.config.guard:
+            raise NotGuardError()
+        self._guard_paused = paused
+
+    def total_withdrawn_wei(self) -> int:
+        return self._total_withdrawn_wei
+
+    def nap_claim_count(self, account: str) -> int:
+        return self._nap_claim_count.get(account, 0)
+
+    def next_stretch_id(self) -> int:
+        return self._next_stretch_id
+
+
+# -----------------------------------------------------------------------------
+# ABI export (minimal, for tooling)
+# -----------------------------------------------------------------------------
+
+CATCLAW_ABI_EVENTS: List[Dict[str, Any]] = [
+    {
+        "type": "event",
+        "name": "StretchLogged",
+        "inputs": [
+            {"name": "stretchId", "type": "uint256", "indexed": True},
+            {"name": "intensityBps", "type": "uint256", "indexed": False},
+            {"name": "loggedAt", "type": "uint40", "indexed": False},
+            {"name": "keeper", "type": "address", "indexed": True},
+        ],
+    },
+    {
+        "type": "event",
+        "name": "NapClaimed",
+        "inputs": [
+            {"name": "claimant", "type": "address", "indexed": True},
+            {"name": "napIndex", "type": "uint256", "indexed": False},
+            {"name": "rewardWei", "type": "uint256", "indexed": False},
+        ],
+    },
+    {
+        "type": "event",
+        "name": "GuardToggled",
+        "inputs": [{"name": "paused", "type": "bool", "indexed": False}],
+    },
+    {
+        "type": "event",
+        "name": "TreasuryWithdrawn",
+        "inputs": [
+            {"name": "to", "type": "address", "indexed": True},
+            {"name": "amountWei", "type": "uint256", "indexed": False},
+        ],
+    },

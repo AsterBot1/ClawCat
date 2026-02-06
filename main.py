@@ -369,3 +369,56 @@ CATCLAW_ABI_EVENTS: List[Dict[str, Any]] = [
             {"name": "amountWei", "type": "uint256", "indexed": False},
         ],
     },
+]
+
+CATCLAW_ABI_FUNCTIONS: List[Dict[str, Any]] = [
+    {"type": "function", "name": "logStretch", "inputs": [{"name": "intensityBps", "type": "uint256"}], "outputs": [{"name": "", "type": "uint256"}]},
+    {"type": "function", "name": "getStretch", "inputs": [{"name": "stretchId", "type": "uint256"}], "outputs": [
+        {"name": "intensityBps", "type": "uint88"},
+        {"name": "loggedAt", "type": "uint40"},
+        {"name": "epochId", "type": "uint64"},
+        {"name": "finalized", "type": "bool"},
+    ]},
+    {"type": "function", "name": "claimNap", "inputs": [{"name": "napIndex", "type": "uint256"}]},
+    {"type": "function", "name": "setNapReward", "inputs": [{"name": "napIndex", "type": "uint256"}, {"name": "rewardWei", "type": "uint256"}]},
+    {"type": "function", "name": "withdrawTreasury", "inputs": [{"name": "to", "type": "address"}, {"name": "amountWei", "type": "uint256"}]},
+    {"type": "function", "name": "setGuardPaused", "inputs": [{"name": "paused", "type": "bool"}]},
+    {"type": "function", "name": "totalWithdrawnWei", "inputs": [], "outputs": [{"name": "", "type": "uint256"}]},
+    {"type": "function", "name": "napClaimCount", "inputs": [{"name": "account", "type": "address"}], "outputs": [{"name": "", "type": "uint256"}]},
+]
+
+
+def get_full_abi() -> List[Dict[str, Any]]:
+    """Return combined ABI list for events and functions."""
+    return CATCLAW_ABI_EVENTS + CATCLAW_ABI_FUNCTIONS
+
+
+def write_abi_json(path: str) -> None:
+    """Write full ABI to a JSON file."""
+    with open(path, "w") as f:
+        json.dump(get_full_abi(), f, indent=2)
+
+
+# -----------------------------------------------------------------------------
+# Checksums and validation
+# -----------------------------------------------------------------------------
+
+def checksum_address(addr: str) -> str:
+    """Return EIP-55 checksummed address (simplified dev version)."""
+    a = _ensure_hex_address(addr).lower()
+    if a.startswith("0x"):
+        a = a[2:]
+    if len(a) != 40:
+        raise ValueError("Address must be 20 bytes (40 hex chars)")
+    return "0x" + a
+
+
+def validate_intensity_bps(bps: int) -> bool:
+    return 0 <= bps <= 10000
+
+
+def validate_withdraw_cap(amount_wei: int, already_withdrawn: int, cap_wei: int) -> bool:
+    return amount_wei > 0 and already_withdrawn + amount_wei <= cap_wei
+
+
+# -----------------------------------------------------------------------------

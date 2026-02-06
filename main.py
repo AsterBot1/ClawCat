@@ -51,3 +51,56 @@ class NotTreasuryError(CatClawError):
 
 class NotGuardError(CatClawError):
     """Raised when caller is not the guard."""
+    pass
+
+
+class GuardPausedError(CatClawError):
+    """Raised when contract is paused."""
+    pass
+
+
+class InvalidStretchIdError(CatClawError):
+    """Raised when stretch or nap index is invalid."""
+    pass
+
+
+class StretchAlreadyFinalizedError(CatClawError):
+    """Raised when stretch is already finalized."""
+    pass
+
+
+class WithdrawOverCapError(CatClawError):
+    """Raised when withdrawal would exceed cap."""
+    pass
+
+
+class ZeroAmountError(CatClawError):
+    """Raised when amount or address is zero."""
+    pass
+
+
+class ReentrantError(CatClawError):
+    """Raised on reentrancy attempt."""
+    pass
+
+
+# -----------------------------------------------------------------------------
+# Enums and data types
+# -----------------------------------------------------------------------------
+
+class StretchStatus(enum.IntEnum):
+    PENDING = 0
+    LOGGED = 1
+    FINALIZED = 2
+
+
+class GuardState(enum.IntEnum):
+    ACTIVE = 0
+    PAUSED = 1
+
+
+@dataclass(frozen=True)
+class StretchRecord:
+    intensity_bps: int
+    logged_at: int
+    epoch_id: int

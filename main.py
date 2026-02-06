@@ -104,3 +104,56 @@ class StretchRecord:
     intensity_bps: int
     logged_at: int
     epoch_id: int
+    finalized: bool
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "intensityBps": self.intensity_bps,
+            "loggedAt": self.logged_at,
+            "epochId": self.epoch_id,
+            "finalized": self.finalized,
+        }
+
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]) -> StretchRecord:
+        return cls(
+            intensity_bps=int(d.get("intensityBps", d.get("intensity_bps", 0))),
+            logged_at=int(d.get("loggedAt", d.get("logged_at", 0))),
+            epoch_id=int(d.get("epochId", d.get("epoch_id", 0))),
+            finalized=bool(d.get("finalized", False)),
+        )
+
+
+@dataclass
+class CatClawConfig:
+    keeper: str = DEFAULT_KEEPER
+    treasury: str = DEFAULT_TREASURY
+    guard: str = DEFAULT_GUARD
+    genesis_time: int = 0
+    withdraw_cap_wei: int = CATCLAW_WITHDRAW_CAP_WEI
+    chain_id: int = 1
+
+    def with_genesis(self, ts: int) -> CatClawConfig:
+        return dataclasses.replace(self, genesis_time=ts)
+
+    def to_env_dict(self) -> Dict[str, str]:
+        return {
+            "CATCLAW_KEEPER": self.keeper,
+            "CATCLAW_TREASURY": self.treasury,
+            "CATCLAW_GUARD": self.guard,
+            "CATCLAW_CHAIN_ID": str(self.chain_id),
+        }
+
+
+# -----------------------------------------------------------------------------
+# Encoding helpers (ABI-like, for dev simulation)
+# -----------------------------------------------------------------------------
+
+def _ensure_hex_address(addr: Union[str, bytes]) -> str:
+    if isinstance(addr, bytes):
+        return "0x" + addr.hex()
+    s = addr.strip()
+    if not s.startswith("0x"):
+        s = "0x" + s
+    return s
+

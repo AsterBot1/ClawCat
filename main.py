@@ -263,3 +263,56 @@ class CatClawSimulator:
         self._next_stretch_id: int = 0
         self._guard_paused: bool = False
         self._reentrancy_lock: int = 0
+
+    def set_genesis(self, ts: int) -> None:
+        self.config = self.config.with_genesis(ts)
+
+    def log_stretch(self, intensity_bps: int, caller: str, now_ts: int) -> int:
+        if caller != self.config.keeper:
+            raise NotKeeperError()
+        if self._guard_paused:
+            raise GuardPausedError()
+        if self._reentrancy_lock != 0:
+            raise ReentrantError()
+        stretch_id = self._next_stretch_id
+        self._next_stretch_id += 1
+        epoch = epoch_at(self.config.genesis_time, now_ts)
+        rec = StretchRecord(
+            intensity_bps=clamp_intensity_bps(intensity_bps),
+            logged_at=now_ts,
+            epoch_id=epoch,
+            finalized=True,
+        )
+        self._stretches[stretch_id] = rec
+        return stretch_id
+
+    def get_stretch(self, stretch_id: int) -> Optional[StretchRecord]:
+        return self._stretches.get(stretch_id)
+
+    def set_nap_reward(self, nap_index: int, reward_wei: int, caller: str) -> None:
+        if caller != self.config.keeper:
+            raise NotKeeperError()
+        self._naps[nap_index] = reward_wei
+
+    def claim_nap(self, nap_index: int, claimant: str) -> int:
+        if self._guard_paused:
+            raise GuardPausedError()
+        if self._reentrancy_lock != 0:
+            raise ReentrantError()
+        reward = self._naps.get(nap_index, 0)
+        if reward == 0:
+            raise InvalidStretchIdError()
+        self._naps[nap_index] = 0
+        self._nap_claim_count[claimant] = self._nap_claim_count.get(claimant, 0) + 1
+        return reward
+
+    def withdraw_treasury(self, to: str, amount_wei: int, caller: str) -> None:
+        if caller != self.config.treasury:
+            raise NotTreasuryError()
+        if not to or amount_wei == 0:
+            raise ZeroAmountError()
+        if self._total_withdrawn_wei + amount_wei > self.config.withdraw_cap_wei:
+            raise WithdrawOverCapError()
+        if self._reentrancy_lock != 0:
+            raise ReentrantError()
+        self._total_withdrawn_wei += amount_wei

@@ -581,3 +581,56 @@ def invariant_intensity_in_range(rec: StretchRecord) -> bool:
 
 def scenario_full_epoch(genesis: int, num_stretches: int, keeper: str) -> List[Tuple[int, StretchRecord]]:
     """Simulate one epoch of stretches at 100-second intervals."""
+    sim = CatClawSimulator(CatClawConfig(genesis_time=genesis, keeper=keeper, treasury=DEFAULT_TREASURY, guard=DEFAULT_GUARD))
+    out: List[Tuple[int, StretchRecord]] = []
+    for i in range(num_stretches):
+        ts = genesis + i * 100
+        sid = sim.log_stretch(3000 + i * 100, keeper, ts)
+        rec = sim.get_stretch(sid)
+        if rec:
+            out.append((sid, rec))
+    return out
+
+
+def scenario_nap_claims(nap_indices: List[int], rewards: List[int], claimants: List[str], keeper: str) -> Dict[str, int]:
+    """Set nap rewards and simulate claims; return final claim counts per claimant."""
+    config = CatClawConfig(keeper=keeper, treasury=DEFAULT_TREASURY, guard=DEFAULT_GUARD)
+    sim = CatClawSimulator(config)
+    for idx, r in zip(nap_indices, rewards):
+        sim.set_nap_reward(idx, r, keeper)
+    for idx, claimer in zip(nap_indices, claimants):
+        try:
+            sim.claim_nap(idx, claimer)
+        except (InvalidStretchIdError, GuardPausedError, ReentrantError):
+            pass
+    return {c: sim.nap_claim_count(c) for c in claimants}
+
+
+# -----------------------------------------------------------------------------
+# Export list for wildcard import
+# -----------------------------------------------------------------------------
+
+__all__ = [
+    "CATCLAW_MAX_STRETCH_PER_EPOCH",
+    "CATCLAW_EPOCH_SECS",
+    "CATCLAW_WITHDRAW_CAP_WEI",
+    "DEFAULT_KEEPER",
+    "DEFAULT_TREASURY",
+    "DEFAULT_GUARD",
+    "CatClawError",
+    "NotKeeperError",
+    "NotTreasuryError",
+    "NotGuardError",
+    "GuardPausedError",
+    "InvalidStretchIdError",
+    "StretchAlreadyFinalizedError",
+    "WithdrawOverCapError",
+    "ZeroAmountError",
+    "ReentrantError",
+    "StretchStatus",
+    "GuardState",
+    "StretchRecord",
+    "CatClawConfig",
+    "encode_uint256",
+    "encode_address",
+    "encode_bool",

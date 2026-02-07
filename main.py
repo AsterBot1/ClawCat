@@ -422,3 +422,56 @@ def validate_withdraw_cap(amount_wei: int, already_withdrawn: int, cap_wei: int)
 
 
 # -----------------------------------------------------------------------------
+# Script / CLI helpers
+# -----------------------------------------------------------------------------
+
+def load_config_from_env() -> CatClawConfig:
+    """Build config from environment variables."""
+    return CatClawConfig(
+        keeper=os.environ.get("CATCLAW_KEEPER", DEFAULT_KEEPER),
+        treasury=os.environ.get("CATCLAW_TREASURY", DEFAULT_TREASURY),
+        guard=os.environ.get("CATCLAW_GUARD", DEFAULT_GUARD),
+        chain_id=int(os.environ.get("CATCLAW_CHAIN_ID", "1")),
+    )
+
+
+def run_simulation_example() -> None:
+    """Run a short simulation and print results."""
+    config = CatClawConfig(genesis_time=1700000000)
+    sim = CatClawSimulator(config)
+    stretch_id = sim.log_stretch(5000, config.keeper, 1700000100)
+    print(f"Logged stretch id={stretch_id}")
+    rec = sim.get_stretch(stretch_id)
+    assert rec is not None
+    print(f"  intensityBps={rec.intensity_bps}, epochId={rec.epoch_id}")
+    sim.set_nap_reward(0, 1 * 10**18, config.keeper)
+    reward = sim.claim_nap(0, "0x" + "11" * 20)
+    print(f"  claimed nap reward={reward}")
+    print("Simulation OK.")
+
+
+# -----------------------------------------------------------------------------
+# Batch and bulk helpers
+# -----------------------------------------------------------------------------
+
+def batch_encode_log_stretch(intensity_list: List[int]) -> List[bytes]:
+    """Encode multiple logStretch calldatas."""
+    return [encode_log_stretch(clamp_intensity_bps(bps)) for bps in intensity_list]
+
+
+def batch_stretch_ids(start_id: int, count: int) -> List[int]:
+    """Return list of stretch ids [start_id, start_id+1, ...]."""
+    return list(range(start_id, start_id + count))
+
+
+def compute_epoch_bounds(genesis_time: int, epoch_index: int) -> Tuple[int, int]:
+    """Return (start_ts, end_ts) for epoch (inclusive start, exclusive end)."""
+    start = genesis_time + epoch_index * CATCLAW_EPOCH_SECS
+    return (start, start + CATCLAW_EPOCH_SECS)
+
+
+def stretches_in_epoch(stretch_records: List[Tuple[int, StretchRecord]], epoch_id: int) -> List[Tuple[int, StretchRecord]]:
+    """Filter (stretch_id, record) list by epoch_id."""
+    return [(sid, rec) for sid, rec in stretch_records if rec.epoch_id == epoch_id]
+
+

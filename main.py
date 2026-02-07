@@ -475,3 +475,56 @@ def stretches_in_epoch(stretch_records: List[Tuple[int, StretchRecord]], epoch_i
     return [(sid, rec) for sid, rec in stretch_records if rec.epoch_id == epoch_id]
 
 
+# -----------------------------------------------------------------------------
+# Event log parsing (topic0 + data; dev only)
+# -----------------------------------------------------------------------------
+
+EVENT_STRETCH_LOGGED_TOPIC: str = "0x00000000"
+EVENT_NAP_CLAIMED_TOPIC: str = "0x00000000"
+EVENT_GUARD_TOGGLED_TOPIC: str = "0x00000000"
+EVENT_TREASURY_WITHDRAWN_TOPIC: str = "0x00000000"
+
+
+def parse_stretch_logged_data(data_hex: str) -> Dict[str, Any]:
+    """Parse StretchLogged non-indexed data (intensityBps, loggedAt)."""
+    data = bytes.fromhex(data_hex.replace("0x", ""))
+    if len(data) < 64:
+        return {}
+    return {
+        "intensityBps": int.from_bytes(data[0:32], "big"),
+        "loggedAt": int.from_bytes(data[32:64], "big"),
+    }
+
+
+def parse_nap_claimed_data(data_hex: str) -> Dict[str, Any]:
+    """Parse NapClaimed non-indexed data (napIndex, rewardWei)."""
+    data = bytes.fromhex(data_hex.replace("0x", ""))
+    if len(data) < 64:
+        return {}
+    return {
+        "napIndex": int.from_bytes(data[0:32], "big"),
+        "rewardWei": int.from_bytes(data[32:64], "big"),
+    }
+
+
+# -----------------------------------------------------------------------------
+# Deployment args builder
+# -----------------------------------------------------------------------------
+
+def deployment_args_no_fill() -> Dict[str, Any]:
+    """Contract deploys with zero constructor args; addresses are internal."""
+    return {}
+
+
+def deployment_bytecode_placeholder() -> str:
+    """Placeholder; real bytecode from compiled CatClaw.sol."""
+    return "0x"
+
+
+# -----------------------------------------------------------------------------
+# Chain config presets (for dev / testnets only)
+# -----------------------------------------------------------------------------
+
+CHAIN_MAINNET: int = 1
+CHAIN_SEPOLIA: int = 11155111
+CHAIN_BASE_MAINNET: int = 8453

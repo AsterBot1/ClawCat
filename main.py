@@ -528,3 +528,56 @@ def deployment_bytecode_placeholder() -> str:
 CHAIN_MAINNET: int = 1
 CHAIN_SEPOLIA: int = 11155111
 CHAIN_BASE_MAINNET: int = 8453
+CHAIN_BASE_SEPOLIA: int = 84532
+CHAIN_ANVIL: int = 31337
+
+CHAIN_NAMES: Dict[int, str] = {
+    CHAIN_MAINNET: "mainnet",
+    CHAIN_SEPOLIA: "sepolia",
+    CHAIN_BASE_MAINNET: "base",
+    CHAIN_BASE_SEPOLIA: "base_sepolia",
+    CHAIN_ANVIL: "anvil",
+}
+
+
+def chain_name(chain_id: int) -> str:
+    return CHAIN_NAMES.get(chain_id, f"chain_{chain_id}")
+
+
+# -----------------------------------------------------------------------------
+# Gas and limits (informational)
+# -----------------------------------------------------------------------------
+
+ESTIMATE_LOG_STRETCH_GAS: int = 80_000
+ESTIMATE_CLAIM_NAP_GAS: int = 65_000
+ESTIMATE_WITHDRAW_TREASURY_GAS: int = 55_000
+ESTIMATE_SET_GUARD_PAUSED_GAS: int = 45_000
+
+
+def estimate_batch_log_stretch_gas(n: int) -> int:
+    """Rough total gas for n logStretch calls (no batching in contract)."""
+    return n * ESTIMATE_LOG_STRETCH_GAS
+
+
+# -----------------------------------------------------------------------------
+# Sanity checks and invariants
+# -----------------------------------------------------------------------------
+
+def invariant_total_withdrawn_leq_cap(total_withdrawn: int, cap: int) -> bool:
+    return total_withdrawn <= cap
+
+
+def invariant_stretch_id_monotonic(ids: List[int]) -> bool:
+    return all(ids[i] < ids[i + 1] for i in range(len(ids) - 1)) if len(ids) > 1 else True
+
+
+def invariant_intensity_in_range(rec: StretchRecord) -> bool:
+    return 0 <= rec.intensity_bps <= 10000
+
+
+# -----------------------------------------------------------------------------
+# Extra simulation scenarios
+# -----------------------------------------------------------------------------
+
+def scenario_full_epoch(genesis: int, num_stretches: int, keeper: str) -> List[Tuple[int, StretchRecord]]:
+    """Simulate one epoch of stretches at 100-second intervals."""
